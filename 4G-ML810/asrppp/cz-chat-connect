@@ -1,0 +1,17 @@
+#ABORT "BUSY"
+#ABORT "NO CARRIER"
+#ABORT "NO DIALTONE"
+#ABORT "ERROR"
+#ABORT "NO ANSWER"
+TIMEOUT 10
+"" AT
+OK ATE0
+OK ATI;+CPIN?;+COPS?;+CEREG?;+CGREG?;&D2
+#china unicom's apn is 3gnet
+#OK AT+CGDCONT=1,"IP","3gnet",,0,0
+#OK ATD*99#
+#China mobile APN
+OK AT+CGDCONT=1,"IP","cmnet"
+#OK ATDT*99***1#
+OK ATD*99#
+CONNECT ""

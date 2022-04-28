@@ -1,0 +1,18 @@
+采用PPP方式
+需先移植ppp
+
+1、首先先下载ppp-2.4.7
+
+2、交叉编译，
+首先./configure
+之后make CC=arm-linux-gcc(在configure时，试过--host=arm-linux-gcc,发现不好用就在这里加了）
+
+3、编译完成后，
+将pppd,chat复制到/usr/sbin目录下，
+
+
+PS:如果采用rndis方式：
+
+需要补充以下流程：
+ifconfig eth2 up
+udhcpc -b -i eth2 -p /var/run/udhcpc.pid -R

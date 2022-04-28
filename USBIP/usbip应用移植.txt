@@ -1,0 +1,63 @@
+ubuntu16.04 32bit环境
+1.已经安装nuc交叉编译工具
+
+2.安装依赖库
+sudo apt-get install autoconf
+sudo apt-get install automake
+sudo apt-get install libtool
+sudo apt-get install autotools-dev libsysfs-dev libglib2.0-dev sysfsutils libsysfs2 
+sudo apt-get install gperf
+
+3.安装eudev
+https://dev.gentoo.org/~blueness/eudev/
+下载目前最新版本eudev-3.2.9.tar.gz
+tar -xvf eudev-3.2.9.tar.gz
+cd eudev-3.2.9
+./configure --host=arm-linux --prefix=/home/yxb/usbip/eudevuser CC=arm-linux-gcc AR=arm-linux-ar --disable-blkid --disable-kmod
+make 
+make install
+
+4.编译usbip2.0
+解压附件usbip2.0_patch.7z
+cd usbip2.0_patch/drivers/staging/usbip/userspace
+./cleanup.sh 
+./autogen.sh
+./configure --target=arm-linux --host=arm-linux --prefix=/home/yxb/usbip/usbipuser --cache-file=arm-linux.cache  CFLAGS=-I/home/yxb/usbip/eudevuser/include LDFLAGS=-L/home/yxb/usbip/eudevuser/lib
+make 
+make install
+
+5.内核添加 usbip2.0_patch 覆盖 linux-3.10.x/drivers/staging/usbip/userspace
+make menuconfig
+Device Drivers
+--- Staging drivers                           
+  │ │ <*>   USB/IP support                                                                                                                                 │ │  
+  │ │ <*>     VHCI hcd                                                                                                                                     │ │  
+  │ │ <*>     Host driver 
+重新编译
+  
+补充说明
+问题点1：libsrc/usbip_common.h:18:25: fatal error: linux/usbip.h: No such file or directory
+         #include <linux/usbip.h>
+解决方法：#include "../src/usbip.h"： 
+
+问题点2：usbip_host_driver.c:102:2: error: implicit declaration of function ‘rpl_realloc’
+解决方法：vi usbip2.0_patch/drivers/staging/usbip/userspace/config.h
+//#define realloc rpl_realloc
+
+问题点3：usbip_host_driver.c:239:22: error: ‘SDEV_ST_AVAILABLE’ undeclared (first use in this function)
+解决方法：在libsrc/usbip_common.h增加如下定义
+enum usbip_device_status{
+       /* sdev is available. */
+       SDEV_ST_AVAILABLE = 0x01,
+       /* sdev is now used. */
+       SDEV_ST_USED,
+       /* sdev is unusable because of a fatal error. */
+       SDEV_ST_ERROR,
+
+       /* vdev does not connect a remote device. */
+       VDEV_ST_NULL,
+       /* vdev is used, but the USB address is not assigned yet */
+       VDEV_ST_NOTASSIGNED,
+       VDEV_ST_USED,
+       VDEV_ST_ERROR
+};

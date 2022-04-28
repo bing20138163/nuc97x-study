@@ -1,0 +1,32 @@
+/dev/ttyUSB2 115200
+connect "/usr/sbin/chat -v -s -f /etc/ppp/peers/cz-chat-connect"
+disconnect 'chat -s -v -f /etc/ppp/peers/cz-chat-disconnect'
+hide-password
+noauth
+nocrtscts
+nocdtrcts
+local
+debug
+nobsdcomp
+nodeflate
+nodetach
+novj
+defaultroute
+noipdefault
+usepeerdns
+ipcp-accept-local
+ipcp-accept-remote
+noccp
+#lock
+modem
+dump
+nodetach
+remotename 3gppp
+ipparam 3gppp
+ipcp-max-failure 10
+usepeerdns
+
+
+
+
+

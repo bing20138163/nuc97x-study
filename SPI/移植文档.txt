@@ -1,0 +1,92 @@
+一、uboot采用uboot.v2016.11版本
+0.make clean
+1.将nuc970_evb.h 覆盖include/configs/
+2.将nuc97x_uboot_spi_config 覆盖.config
+3.make menuconfig save
+4.make 生成 uboot.bin
+补充点：
+1.nuc970_evb.h主要配置 spi flash
+
+#define CONFIG_SYS_USE_SPIFLASH
+/*#define CONFIG_SYS_USE_NANDFLASH*/ 
+/*#define CONFIG_ENV_IS_IN_NAND */
+#define CONFIG_ENV_IS_IN_SPI_FLASH
+/*#define CONFIG_ENV_IS_IN_MMC */
+
+2.修改spi flash 厂家默认是华邦,配置指定厂家
+Device Drivers  ---> 
+	SPI Flash Support  ---> 
+		[*] Legacy SPI Flash Interface support                  
+		[*]   SPI flash Bank/Extended address register support                                                                                               │ │  
+		[ ]   Atmel SPI flash support                                                                                                                        │ │  
+		[ ]   EON SPI flash support                                                                                                                          │ │  
+		[ ]   GigaDevice SPI flash support                                                                                                                   │ │  
+		[ ]   Macronix SPI flash support                                                                                                                     │ │  
+		[ ]   Spansion SPI flash support                                                                                                                     │ │  
+		[ ]   STMicro SPI flash support                                                                                                                      │ │  
+		[ ]   SST SPI flash support                                                                                                                          │ │  
+		[*]   Winbond SPI flash support                                                                                                                      │ │  
+		[ ]   Winbond SPI NAND flash support                                                                                                                 │ │  
+		[*]   Use small 4096 B erase sectors                                                                                                                 │ │  
+		[ ]   SPI Flash MTD support  
+
+二、内核配置
+1.设置分区		
+vi arch/arm/mach-nuc970/dev.c
+static struct mtd_partition nuc970_spi0_flash_partitions[] = {
+	{
+		.name = “u-boot”,
+		.size = 512 * 1024,
+		.offset = 0,
+	},
+	{
+		.name = “u-boot env”,
+		.size = 512 * 1024,
+		.offset = MTDPART_OFS_APPEND,
+	},
+	{
+		.name = “kernel”,
+		.size = 4 * 1024 * 1024,
+		.offset = MTDPART_OFS_APPEND,
+	},
+	{
+		.name = “rootfs”,
+		.offset = MTDPART_OFS_APPEND,
+		.size = MTDPART_SIZ_FULL,
+	},
+};
+2.去掉SECT_4K
+vi drivers/mtd/devices/m25p80.c
+static const struct spi_device_id m25p_ids[] 
+ { "w25q128", INFO(0xef4018, 0, 64 * 1024,256,/*SECT_4K |*/ M25P80_DUAL_READ | M25P80_QUAD_READ | M25P80_QUAD_WRITE) },  //16MB FLASH
+ { "w25q256", INFO(0xef4019, 0, 64 * 1024, 512,0 /*SECT_4K*/) }, //32MB FLASH
+3. cp nuc97x_spi_jffs2_kernel_config 文件.config
+4.make menuconfig
+	System Type  --->
+		Nuvoton NUC970/N9H30 Series Development Board (NUC972 Development Board)  ---> //972
+		或者
+		Nuvoton NUC970/N9H30 Series Development Board (NUC977 Development Board)  ---> //977
+		
+5.make uImage 
+
+三、文件系统jffs2
+mkfs.jffs2 -e 0x10000 -p 0xB00000 -l -d rootfs/ -o rootfs.jffs2 //16MB flash
+mkfs.jffs2 -e 0x10000 -p 0x1B00000 -l -d rootfs/ -o rootfs.jffs2 //32MB flash 
+
+四、烧录
+1.uboot 
+Image Type：uBoot型
+Image execute address: 0xE00000
+2.env.txt (见附件)
+Image Type：Environment型
+Image start offset： 0x80000
+3.kernel
+Image Type：Data型
+Image start offset： 0x100000
+4.jffs2
+Image Type：Data型
+Image start offset： 0x500000
+
+PS:
+1.SPI FLASH 空间和速率相对会比nand慢一些，所以jffs2系统要小一些不然容易超出范围的。
+2.mkfs.jffs2 安装 sudo apt-get install mtd-utils 

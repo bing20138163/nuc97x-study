@@ -1,0 +1,32 @@
+一、修改点
+1、sss_node.mgmt_sock = open_socket(sss_node.mport, 1 /* bind LOOPBACK */);//bind LOOPBACK->ANY by yang
+
+二、DHCP设置
+edge :          ./edge -d n2n -c ukey -k admin@123.com -l 172.16.5.221:9999 -r -v
+supernode:  supernode.exe -p 9999 -a 11.128.0.0-11.128.255.0/24 -t 7777 -v
+注意WIN环境调试dhcp功能时需要release模式，不能用debug
+
+三、固定IP
+./edge -d n2n -c asionet -k es99.com -a 192.100.1.100 -l ssl.epci.cn:1000 -s 255.255.255.0 -r -v
+备注-m 01:02:03:04:05:06 固定MAC地址
+
+//UDP-私有协议
+//mgmt-debug
+//mgmt-release
+-community-num-数量,组名,组员数量,组名,组员数量   //获取组数量
+-community-name-组名-组员总数量-组员起止编号,组员信息,组员信息,
+-mix-参数数量,参数1,参数2，
+
+eg-------------------------------------------------------------
+1.////调试信息
+    send: mgmt-debug
+    recv:  之前
+2.////获取组数量
+     send: mgmt-release-community-num 
+     recv:  mgmt-release-community-num-数量,组名,组员数量,组名,组员数量  
+3.////获取组信息
+     send: mgmt-release-community-name-组名 
+     recv:  mgmt-release-community-name-组名-组员总数量-组员起止编号,组员信息,组员信息,
+4.////获取混合参数信息
+     send: mgmt-release-mix
+     recv : mgmt-release-mix-参数数量,参数1,参数2，
