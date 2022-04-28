@@ -1,0 +1,38 @@
+建议ubuntu版本在16.04以上（默认cmake安装版本较高）
+
+一，编译N2N应用
+1,mkdir /opt/n2n/
+2,tar -xzvf n2n_v2-oldversion.tar.gz
+3,cd /opt/n2n/n2n_v2
+4,make clean 
+5,vi CMakeLists.txt 指定交叉编译器-修改如下：
+ SET(CMAKE_C_COMPILER "arm-linux-gcc")
+ SET(CMAKE_CXX_COMPILER "arm-linux-g++")
+ 或者
+ SET(CMAKE_C_COMPILER "gcc")
+ SET(CMAKE_CXX_COMPILER "g++")
+ 具体看编译环境
+ 
+6,cmake .
+7,make
+8,cp  edge文件 /sbin  和cp libn2n.a libscm.a 文件至 /lib（嵌入式ARM）
+
+二，linux 内核配置
+1, Device Drivers  --->		
+	  [*] Network device support  ---> 
+		 <*> Universal TUN/TAP device driver support
+2, [*] Networking support  --->
+	  Networking options  --->
+		<*>   IP: tunneling
+		<*>   IP: IPsec tunnel mode 
+		<*> Virtual Socket protocol
+
+三，edge应用
+	./sbin/edge -d n2n -c asionet -k es99.com -a 192.100.1.100 -l ssl.epci.cn:1000 -s 255.255.255.0 -r -M 1300 -v -f		
+		
+PS:如果识别不了cmake指令,则sudo apt-get install cmake 
+   如果出现识别不了gcc/g++编译器,则cmake -DCMAKE_CXX_COMPILER=$(which g++) -DCMAKE_C_COMPILER=$(which gcc) ./
+   如果出现识别不了gmake,则sudo ln -s /usr/bin/make /usr/bin/gmake
+   
+以上仅供查看   
+ 

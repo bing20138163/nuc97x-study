@@ -1,0 +1,19 @@
+#!/bin/sh
+/bin/mount -t proc none /proc
+/bin/mount -t sysfs sysfs /sys
+/bin/mount -t ramfs /tmp
+/bin/mount -t ramfs /mnt
+#/bin/mkdir /mnt/pts
+#/bin/mount -t devpts devpts /dev/pts
+/bin/echo > /dev/mdev.seq
+/bin/echo /bin/mdev > /proc/sys/kernel/hotplug
+/bin/mdev -s
+
+#mount -t vfat  /dev/mmcblk0p1 /mnt/
+echo 1 > /proc/sys/net/ipv4/ip_forward
+#quectel-CM -s ctnet &
+ifconfig eth0 192.168.0.100 up netmask 255.255.255.0
+route add default gw 192.168.0.100
+udhcpd -fS /etc/udhcpd.conf &
+
+udhcpc -b -i eth1 -p /var/run/udhcpc.pid -R &

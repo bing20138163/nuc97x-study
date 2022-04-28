@@ -1,0 +1,31 @@
+双网卡端口转发原理:
+1,发送:外网IP的端口有连接进来=>>转发到目标机上=>>      
+2,回路:目标机=>>转发到内网IP上
+
+//TCP转发
+iptables -t nat -A PREROUTING -d 172.16.5.137 -p tcp --dport 2000 -j DNAT --to-destination 192.168.80.20:2000  
+iptables -t nat -A POSTROUTING -d 192.168.80.20 -p tcp --dport 2000 -j SNAT --to 192.168.80.1
+
+//UDP转发
+iptables -t nat -A PREROUTING -d 172.16.5.137 -p udp --dport 3000 -j DNAT --to-destination 192.168.80.20:3000  
+iptables -t nat -A POSTROUTING -d 192.168.80.20 -p udp --dport 3000 -j SNAT --to 192.168.80.1
+
+//关闭防火墙
+iptables -A FORWARD -o eth0 -d 192.168.80.20 -p tcp --dport 443 -j ACCEPT  
+iptables -A FORWARD -i eth0 -s 192.168.80.20 -p tcp --sport 443 -j ACCEPT  
+
+iptables -t nat -L
+
+EG://
+前提：
+    设备1 双网口 eth0:192.168.80.1 eth1:172.16.5.137
+    设备2 单网口 eth0:192.168.80.2
+目的：
+    通过设备1的eth1 3241端口 转发设备2的eth0 3240端口数据
+iptables 使用说明:
+	iptables -t nat -A PREROUTING -d 172.16.5.137 -p tcp --dport 3241 -j DNAT --to-destination 192.168.80.2:3240  
+	iptables -t nat -A POSTROUTING -d 192.168.80.2 -p tcp --dport 3241 -j SNAT --to 192.168.80.1
+	iptables -t nat -A PREROUTING -d 172.16.5.137 -p udp --dport 3241 -j DNAT --to-destination 192.168.80.2:3240  
+	iptables -t nat -A POSTROUTING -d 192.168.80.2 -p udp --dport 3241 -j SNAT --to 192.168.80.1
+
+

@@ -1,0 +1,154 @@
+新塘970移植EC20
+
+1.Add VID and PID 
+   在File: [KERNEL]/drivers/usb/serial/option.c
+   
+	static const struct usb_device_id option_ids[] = { 
+//////////////////////////////////////////////////////////////	
+	#if 1 //Added by Quectel
+	 { USB_DEVICE(0x05C6, 0x9090) }, /* Quectel UC15 */ 
+	 { USB_DEVICE(0x05C6, 0x9003) }, /* Quectel UC20 */ 
+	 { USB_DEVICE(0x2C7C, 0x0125) }, /* Quectel EC25/EC20 R2.0 */
+	 { USB_DEVICE(0x2C7C, 0x0121) }, /* Quectel EC21 */ 
+	 { USB_DEVICE(0x05C6, 0x9215) }, /* Quectel EC20 */ 
+	{ USB_DEVICE(0x2C7C, 0x0191) }, /* Quectel EG91 */ 
+	{ USB_DEVICE(0x2C7C, 0x0195) }, /* Quectel EG95 */
+	{ USB_DEVICE(0x2C7C, 0x0306) }, /* Quectel EG06/EP06/EM06 */
+	{ USB_DEVICE(0x2C7C, 0x0296) }, /* Quectel BG96 */
+	#endif
+////////////////////////////////////////////////////////////////
+
+2.delete VP413
+   2.1  DELETE THIS File: [KERNEL]/drivers/usb/serial/qcserial.c   
+    {USB_DEVICE(0x05c6, 0x9215)}, /* Acer Gobi 2000 Modem device (VP413) */  
+   2.2  DELETE THIS File:/linux-3.10.x/drivers/net/usb/qmi_wwan.c	
+    {QMI_GOBI_DEVICE(0x05c6, 0x9215)}, /* Acer Gobi 2000 Modem device (VP413) */
+
+3.Add the Zero Packet Mechanism
+	File: [KERNEL]/drivers/usb/serial/usb_wwan.c 
+	static struct urb *usb_wwan_setup_urb(struct usb_serial *serial, int endpoint, 
+	 int dir, void *ctx, char *buf, int len,void (*callback) (struct urb *)) 
+	{ 
+	……
+	 usb_fill_bulk_urb(urb, serial->dev, 
+	 usb_sndbulkpipe(serial->dev, endpoint) | dir, 
+	 buf, len, callback, ctx); 
+////////////////////////////////////////////////////////////////////////////////////////	 
+	#if 1 //Added by Quectel for Zero Packet
+	if (dir == USB_DIR_OUT) { 
+	 struct usb_device_descriptor *desc = &serial->dev->descriptor; 
+	 if (desc->idVendor == cpu_to_le16(0x05C6) && desc->idProduct == cpu_to_le16(0x9090)) 
+	 urb->transfer_flags |= URB_ZERO_PACKET; 
+	 if (desc->idVendor == cpu_to_le16(0x05C6) && desc->idProduct == cpu_to_le16(0x9003)) 
+	 urb->transfer_flags |= URB_ZERO_PACKET; 
+	 if (desc->idVendor == cpu_to_le16(0x05C6) && desc->idProduct == cpu_to_le16(0x9215)) 
+	 urb->transfer_flags |= URB_ZERO_PACKET; 
+	 if (desc->idVendor == cpu_to_le16(0x2C7C)) 
+	 urb->transfer_flags |= URB_ZERO_PACKET; 
+	} 
+	#endif
+///////////////////////////////////////////////////////////////////////////////////////////	
+	 return urb; 
+	} 
+	
+4.Add Reset Resume
+	File: [KERNEL]/drivers/usb/serial/option.c
+	static struct usb_serial_driver option_1port_device = { 
+	……
+	#ifdef CONFIG_PM 
+	 .suspend = usb_wwan_suspend, 
+	 .resume = usb_wwan_resume, 
+////////////////////////////////////////////////////////	 
+	#if 1 //Added by Quectel
+	 .reset_resume = usb_wwan_resume, 
+	#endif 
+///////////////////////////////////////////////////////	
+	#endif 
+	};
+
+5.Use GobiNet
+   File: [KERNEL]/drivers/usb/serial/option.c
+	static int option_probe(struct usb_serial *serial, const struct usb_device_id *id) { 
+	 struct usb_wwan_intf_private *data; 
+	……
+///////////////////////////////////////////////////////////////////////////	
+	#if 1 //Added by Quectel
+	//Quectel UC20's interface 4 can be used as USB Network device
+	 if (serial->dev->descriptor.idVendor == cpu_to_le16(0x05C6) && 
+	serial->dev->descriptor.idProduct == cpu_to_le16(0x9003) 
+	 && serial->interface->cur_altsetting->desc.bInterfaceNumber >= 4) 	
+		return -ENODEV; 
+	//Quectel EC20's interface 4 can be used as USB Network device 
+	 if (serial->dev->descriptor.idVendor == cpu_to_le16(0x05C6) && 
+	serial->dev->descriptor.idProduct == cpu_to_le16(0x9215) 
+	 && serial->interface->cur_altsetting->desc.bInterfaceNumber >= 4) 
+		return -ENODEV; 
+	//Quectel EC25&EC21&EC20 R2.0&EG91&EG95&EG06&EP06&EM06&BG96's interface 4 can be used as USB Network device 
+	 if (serial->dev->descriptor.idVendor == cpu_to_le16(0x2C7C) 
+	 && serial->interface->cur_altsetting->desc.bInterfaceNumber >= 4) 
+		return -ENODEV; 
+	#endif
+////////////////////////////////////////////////////////////////////////////	
+	 /* Store device id so we can use it during attach. */ 
+	 usb_set_serial_data(serial, (void *)id); 
+	 return 0; 
+	}
+	
+6. Enable CONFIG_USB_SERIAL_OPTION	
+	[*] Device Drivers → 
+		[*] USB Support → 
+			[*] USB Serial Converter support → 
+				[*] USB driver for GSM and CDMA modems
+
+7.添加驱动代码 将src路径下代码文件放置在[KERNEL]/drivers/net/usb/	
+
+8.Enable CONFIG_USB_USBNET			
+	[*] Device Drivers → 
+		-*- Network device support → 
+			USB Network Adapters →
+				{*} Multi-purpose USB Networking Framework
+				
+9.add [KERNEL]/drivers/net/usb/Makefile			
+	obj-y += GobiNet.o 
+	GobiNet-objs := GobiUSBNet.o QMIDevice.o QMI.o	
+
+10.make app路径应用 生成quectel-CM 
+
+11.将quectel-CM文件复制至rootfs/sbin
+
+12.make uImage重新烧录内核/rootfs
+
+13.运行quectel-CM -s ctnet &
+效果如下：
+/sbin # quectel-CM -s ctnet &                                                                                                                                               
+/sbin # [01-01_01:21:40:150] Quectel_Linux_ConnectManager_SR01A01V21
+[01-01_01:21:40:150] quectel-CM profile[1] = ctnet///0, pincode = (null)
+[01-01_01:21:40:160] Find qmichannel = /dev/qcqmi2
+[01-01_01:21:40:160] Find usbnet_adapter = eth2
+[01-01_01:21:40:180] Get clientWDS = 7
+[01-01_01:21:40:220] Get clientDMS = 8
+[01-01_01:21:40:250] Get clientNAS = 9
+[01-01_01:21:40:280] Get clientUIM = 10
+[01-01_01:21:40:310] Get clientWDA = 11
+[01-01_01:21:40:350] requestBaseBandVersion EC20CEFHLGR06A01M1G_OCPU_BETA1210
+[01-01_01:21:40:410] requestGetSIMStatus SIMStatus: SIM_READY
+[01-01_01:21:40:410] requestSetProfile[1] ctnet///0
+[01-01_01:21:40:470] requestGetProfile[1] ctnet///0
+[01-01_01:21:40:510] requestRegistrationState2 MCC: 460, MNC: 1, PS: Attached, DataCap: LTE
+[01-01_01:21:40:540] requestQueryDataCall ConnectionStatus: DISCONNECTED
+[01-01_01:21:40:600] requestRegistrationState2 MCC: 460, MNC: 1, PS: Attached, DataCap: LTE
+[01-01_01:21:40:890] requestSetupDataCall WdsConnectionIPv4Handle: 0xe17c1b90
+[01-01_01:21:40:980] requestQueryDataCall ConnectionStatus: CONNECTED
+[01-01_01:21:41:030] udhcpc (v1.22.1) started
+[01-01_01:21:41:060] Sending discover...
+[01-01_01:21:41:130] Sending select for 10.122.63.242...
+[01-01_01:21:41:210] Lease of 10.122.63.242 obtained, lease time 7200
+[01-01_01:21:41:220] deleting routers
+route: ioctl 0x890c failed: No such process
+[01-01_01:21:41:240] adding dns 218.104.128.106
+[01-01_01:21:41:240] adding dns 58.22.96.66
+
+PS:
+  1.需要移植好udhcpc前提.
+  2.上述涉及移植代码只需#if 1 ... #endif 部分到指定位置即可
+  3.退出 killall quectel-CM

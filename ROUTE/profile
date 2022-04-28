@@ -1,0 +1,11 @@
+#modprobe ip_tables
+#modprobe iptable_filtermod
+#probe iptable_nat
+#modprobe ip_conntrack
+#modprobe ip_conntrack_ftpmod
+#probe ip_nat_ftp
+iptables -t nat -A POSTROUTING -s 192.168.0.0/255.255.255.0 -o eth1 -j MASQUERADE
+iptables -t nat -A POSTROUTING -s 192.168.0.0/255.255.255.0 -o eth2 -j MASQUERADE
+
+export LD_LIBRARY_PATH=/lib:/mnt/mmcblk0p2
+/mnt/mmcblk0p1/scan_zbar

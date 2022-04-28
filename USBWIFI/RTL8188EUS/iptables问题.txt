@@ -1,0 +1,55 @@
+原文地址：can't initialize iptables table `nat': Table does作者：究帝
+modprobe ip_tables
+modprobe ip_conntrack
+modprobe iptable_filter
+modprobe ipt_state
+
+
+etworking --->
+Networking options --->
+Network packet filtering framework (Netfilter) --->
+Core Netfilter Configuration --->
+Now just set the modules you need for your netfilter box. That's it, I hope now it works to you.
+
+
+
+如果执行 iptable -L 出现以下信息，那么就需要重新配置和编译内核：
+iptables v1.4.2: can't initialize iptables table `filter': Table does not exist (do you need to insmod?)
+Perhaps iptables or your kernel needs to be upgraded.
+
+配置选项：
+Networking —->
+  Networking options —->
+  [*] Network packet filtering (replaces ipchains)  —>
+    Core Netfilter Configuration  —>
+      <*> Netfilter Xtables support (required for ip_tables)
+    IP: Netfilter Configuration —>
+      <*> Connection tracking (required for masq/NAT)
+      <*> IP tables support (required for filtering/masq/NAT)
+      <*>   IP range match support
+      <*>   Packet filtering
+      <*>     REJECT target support
+      <*>   Full NAT
+
+ip_forward
+除此之外，需要在主机上打开 ip 转发以保持连接通道。
+查看是否已打开 ip 转发（1 表示打开）：
+cat /proc/sys/net/ipv4/ip_forward
+如果未打开，则用以下命令打开：
+echo 1 > /proc/sys/net/ipv4/ip_forward
+保存设置
+以上 iptables 设置和 ip 转发设置在重启系统之后就会消失，因此如果有需要，请将设置保存。
+保存 iptables 设置：
+/etc/init.d/iptables save
+设置系统启动时自动加载 iptables 设置（以 gentoo 为例）：
+rc-update add iptables default
+保存 ip_forward 设置（在 /etc/sysctl.conf 中设置）：
+net.ipv4.ip_forward = 1
+安全隐患
+在打开了 ip_forward 后，一般要同时打开 rp_filter （Reverse Path filter），对数据包的源地址进行检查。
+如果在没有打开这个设置，就很容易受到来自内部网的 IP 欺骗。
+打开 rp_filter：
+for f in /proc/sys/net/ipv4/conf/*/rp_filter ; do echo 1 > $f ; done
+保存设置（在 /etc/sysctl.conf 中设置）：
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.conf.all.rp_filter = 1

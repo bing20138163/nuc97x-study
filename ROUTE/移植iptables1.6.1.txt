@@ -1,0 +1,38 @@
+1. tar jxvf iptables-1.6.1.tar.bz2 
+2. ./configure --host=arm-linux --prefix=/home/topeet/newnuc/user/iptablesdir --enable-static --disable-shared --with-ksource=KERNELSOURCEPATH --disable-nftables
+3. make -j4
+4. make install
+5.内核配置
+	General setup
+		[*] Configure standard kernel features (expert users)  --->
+			[*]   Sysctl syscall support
+			
+	Networking support
+	Networking options  --->  
+		[*]   IP: advanced router 
+		
+		[*] Network packet filtering framework (Netfilter)  --->  
+		Core Netfilter Configuration  ---> 
+			<*> Netfilter connection tracking support
+			<*>   NetBIOS name service protocol support
+			-*- Netfilter Xtables support (required for ip_tables)  
+		
+		 IP: Netfilter Configuration  --->   
+					 <*> IPv4 connection tracking support (required for NAT)  
+					 <*> IP tables support (required for filtering/masq/NAT)
+					 <*>   IPv4 NAT 
+					 <*>     MASQUERADE target support
+					 <*>     NETMAP target support
+					 <*>     REDIRECT target support  
+
+6.增加/etc/profile
+iptables -t nat -A POSTROUTING -s 192.168.0.0/255.255.255.0 -o eth1 -j MASQUERADE
+
+7.修改/etc/init.d/rcS
+echo 1 > /proc/sys/net/ipv4/ip_forward
+ifconfig eth0 192.168.0.100 up netmask 255.255.255.0
+route add default gw 192.168.0.100
+udhcpd -fS /etc/udhcpd.conf &
+udhcpc -b -i eth1 -p /var/run/udhcpc.pid -R &
+
+8.确认/etc/udhcpd.conf里面的网关一致
